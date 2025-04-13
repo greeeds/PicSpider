@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>写真馆</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    <style>
+        /* --- 简约白色主题 + 卡片布局微调 --- */
+        body {
+            background-color: #ffffff; /* 纯白背景 */
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: #333;
+        }
+        .container {
+            max-width: 1320px; /* 根据内容调整容器宽度 */
+        }
+
+        /* --- Header (恢复带搜索栏的版本) --- */
+        header {
+            padding: 20px 0;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #f0f0f0; /* 浅分割线 */
+        }
+         header h1 {
+             color: #1a1a1a;
+             font-size: 1.9em;
+             font-weight: 600;
+             margin: 0;
+        }
+        /* 搜索框 */
+         .input-group .form-control {
+             border-right: none;
+        }
+        .input-group .btn {
+             border-radius: 0 0.375rem 0.375rem 0;
+        }
+
+        /* --- 卡片样式 (恢复卡片结构，保持简约) --- */
+        .album-card {
+            border: 1px solid #f0f0f0; /* 非常浅的边框 */
+            box-shadow: none; /* 默认无阴影 */
+            background-color: #ffffff; /* 卡片白色背景 */
+            border-radius: 6px;
+            transition: box-shadow 0.25s ease-in-out; /* 悬停阴影过渡 */
+        }
+        .album-card:hover {
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08); /* 悬停时柔和阴影 */
+            z-index: 10; /* 确保阴影不被遮挡 */
+            position: relative; /* 配合 z-index */
+        }
+        .album-card .card-img-top {
+            aspect-ratio: 4 / 3;
+            object-fit: cover;
+            border-radius: 6px 6px 0 0; /* 图片顶部圆角 */
+        }
+         .album-card .card-body {
+            text-align: center;
+            padding: 0.8rem 1rem; /* 调整内边距 */
+        }
+        .album-card .card-title {
+            font-size: 0.9rem; /* 调整标题大小 */
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 0; /* 移除标题下边距 */
+            /* 防止标题过长 */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        /* 使用 stretched-link 让整个卡片可点击 */
+        .album-card .card-body .stretched-link::after {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 1;
+            content: "";
+        }
+        .album-card .card-body a.stretched-link { /* 确保覆盖默认颜色 */
+            color: #333;
+            text-decoration: none;
+        }
+        .album-card .card-body a.stretched-link:hover {
+             color: #007bff; /* 链接悬停颜色 */
+        }
+
+         /* --- 无缩略图占位符 --- */
+         .no-thumbnail-placeholder {
+            aspect-ratio: 4 / 3;
+            background-color: #f8f9fa; /* 浅灰背景 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #adb5bd; /* 灰色文字 */
+            font-size: 0.9em;
+            width: 100%;
+            border-radius: 6px 6px 0 0;
+        }
+
+        /* --- 分页样式 (保持简约) --- */
+        .pagination { justify-content: center; margin-top: 40px; }
+        .pagination .page-item { margin: 0 3px; }
+        .pagination .page-link { border: none; background-color: #e9ecef; color: #495057; border-radius: 6px; padding: 6px 12px; font-size: 0.9em; }
+        .pagination .page-link:hover { background-color: #ced4da; }
+        .pagination .page-item.active .page-link { background-color: #0d6efd; color: white; }
+        .pagination .page-item.disabled .page-link { background-color: #f8f9fa; color: #adb5bd; }
+
+         /* --- 空状态 --- */
+        .empty-message { color: #888; padding: 40px 15px; text-align: center; background-color: #f8f9fa; border: 1px solid #eee; border-radius: 4px; }
+
+        /* --- 轮播图样式 --- */
+        .swiper-container {
+            width: 100%;
+            height: 400px;
+            margin-bottom: 30px;
+        }
+        .swiper-slide {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        .swiper-slide img {
+            max-width: 100%;
+            max-height: 80%;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+        .swiper-pagination {
+            position: relative;
+            margin-top: 15px;
+        }
+        .swiper-button-prev, .swiper-button-next {
+            color: #007bff;
+        }
+        .swiper-slide-caption h5 {
+            font-size: 1.1em;
+            margin-top: 10px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        {# --- Header (恢复带搜索栏的版本) --- #}
+        <header class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom flex-wrap">
+            <h1 class="fw-bold">写真馆</h1>
+             <form action="{{ url_for('index') }}" method="get" class="ms-auto mt-2 mt-md-0" style="max-width: 300px;">
+                <div class="input-group input-group-sm">
+                    <input type="text" name="q" class="form-control" placeholder="搜索相册..." value="{{ search_query if search_query is not none else '' }}" aria-label="搜索相册">
+                    <button class="btn btn-outline-secondary" type="submit" id="button-search">
+                        <i class="bi bi-search"></i> <span class="visually-hidden">搜索</span>
+                    </button>
+                </div>
+            </form>
+        </header>
+
+
+
+        {% if albums %}
+            {# --- 恢复响应式网格布局 (Bootstrap 5) --- #}
+            {# Example: 1 col on xs, 2 on sm, 3 on md, 4 on lg, 5 on xl. Adjust as needed. #}
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 g-4">
+                {% for album in albums %}
+                <div class="col">
+                    {# --- 恢复使用 Bootstrap Card --- #}
+                    <div class="card h-100 album-card">
+                        {% if album.thumbnail %}
+                            <img src="{{ url_for('get_image', album_name=album.name, filename=album.thumbnail) }}"
+                                 class="card-img-top"
+                                 alt="{{ album.name }} 预览图"
+                                 loading="lazy">
+                        {% else %}
+                            <div class="no-thumbnail-placeholder">
+                                <span>无预览图</span>
+                            </div>
+                        {% endif %}
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                {# 使用 stretched-link 让整个卡片可点击 #}
+                                <a href="{{ url_for('view_album', album_name=album.name) }}" class="stretched-link">
+                                    {{ album.name }}
+                                </a>
+                            </h5>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {# --- Pagination (保持不变) --- #}
+            {% if pagination.total_pages > 1 %}
+            <nav aria-label="相册分页" class="mt-5">
+                <ul class="pagination">
+                    <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                        <a class="page-link" href="{{ url_for('index', page=pagination.prev_num, q=search_query if search_query is not none else none) }}" aria-label="上一页">
+                           <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item active" aria-current="page">
+                        <span class="page-link">{{ pagination.page }} / {{ pagination.total_pages }}</span>
+                    </li>
+                    <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                        <a class="page-link" href="{{ url_for('index', page=pagination.next_num, q=search_query if search_query is not none else none) }}" aria-label="下一页">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            {% endif %}
+
+        {% else %}
+             <div class="empty-message" role="alert">
+            {% if search_query %}
+                没有找到名称包含 "<strong>{{ search_query }}</strong>" 的相册。
+            {% else %}
+                没有找到任何相册。请检查配置和文件夹。
+            {% endif %}
+            </div>
+        {% endif %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+
+</body>
+</html>

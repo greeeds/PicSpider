@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>相册: {{ album_name }}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/photoswipe@5.4.3/dist/photoswipe.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --text-color: #333;
+            --border-color: #f0f0f0;
+            --hover-shadow: 0 14px 28px rgba(0,0,0,0.12), 0 10px 10px rgba(0,0,0,0.08);
+        }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+            margin: 0; 
+            padding: 0; 
+            background-color: #ffffff; 
+            color: var(--text-color); 
+            line-height: 1.6; 
+        }
+        .container { 
+            max-width: 1400px; 
+            margin: 30px auto; 
+            padding: 0 25px; 
+        }
+        header { 
+            padding: 20px 0;
+            margin-bottom: 30px;
+            border-bottom: 1px solid var(--border-color); 
+            position: sticky;
+            top: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        h1 { 
+            color: #1a1a1a; 
+            margin: 0; 
+            font-size: 1.7em; 
+            font-weight: 600; 
+        }
+        .back-link { 
+            color: var(--text-color); 
+            text-decoration: none; 
+            font-size: 0.95em; 
+            transition: all 0.3s ease;
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: rgba(0, 123, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .back-link:hover { 
+            color: var(--primary-color); 
+            background: rgba(0, 123, 255, 0.15);
+            transform: translateY(-1px);
+        }
+        .back-link i { 
+            margin-right: 4px; 
+            vertical-align: middle; 
+        }
+        .image-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+            margin-top: 20px;
+            padding: 10px;
+        }
+        .image-gallery img {
+            display: block;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 3 / 4;
+            object-fit: cover;
+            cursor: zoom-in;
+            border-radius: 12px;
+            background-color: var(--border-color);
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+        }
+        .image-gallery img:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--hover-shadow);
+        }
+        .empty-message { 
+            color: #888; 
+            padding: 50px; 
+            text-align: center; 
+            grid-column: 1 / -1; 
+            font-size: 1.1em; 
+            background: rgba(0, 0, 0, 0.02);
+            border-radius: 12px;
+            border: 1px dashed #ddd;
+        }
+        .pswp__button--download {
+            background-position: center;
+            background-repeat: no-repeat;
+            background-size: 20px;
+            width: 44px;
+            height: 44px;
+            position: relative;
+            background-color: transparent;
+            cursor: pointer;
+            overflow: visible;
+            -webkit-appearance: none;
+            border: 0;
+            padding: 0;
+            margin: 0;
+        }
+        @media (max-width: 768px) {
+            .container { 
+                margin: 15px auto; 
+                padding: 0 15px; 
+            }
+            .image-gallery {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                gap: 15px;
+            }
+            header {
+                padding-bottom: 10px;
+                margin-bottom: 20px;
+            }
+            h1 {
+                font-size: 1.4em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>{{ album_name }}</h1>
+            <a href="{{ url_for('index') }}" class="back-link">
+                <i class="bi bi-arrow-left-short"></i> 返回相册列表
+            </a>
+        </header>
+
+        <div class="image-gallery" id="gallery">
+            {% if images %}
+                {% for image_filename in images %}
+                    <a href="{{ url_for('get_image', album_name=album_name, filename=image_filename) }}"
+                       data-pswp-width="1920"
+                       data-pswp-height="2560">
+                        <img src="{{ url_for('get_image', album_name=album_name, filename=image_filename) }}"
+                             alt="{{ image_filename }}"
+                             loading="lazy">
+                    </a>
+                {% endfor %}
+            {% else %}
+                <p class="empty-message">这个相册中没有图片。</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/photoswipe@5.4.3/dist/photoswipe.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/photoswipe@5.4.3/dist/photoswipe-lightbox.umd.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const lightbox = new PhotoSwipeLightbox({
+                gallery: '#gallery',
+                children: 'a',
+                pswpModule: PhotoSwipe,
+                padding: { top: 20, bottom: 20, left: 20, right: 20 },
+                bgOpacity: 0.85,
+                showHideAnimationType: 'fade',
+                imageClickAction: 'zoom',
+                tapAction: 'toggle-controls',
+                arrowKeys: true,
+                preload: [1, 2],
+                showAnimationDuration: 300,
+                hideAnimationDuration: 300,
+                errorMsg: '图片加载失败',
+                wheelToZoom: true,
+                zoom: {
+                    baseScale: 1,
+                    maxZoomLevel: 4
+                }
+            });
+
+            lightbox.on('uiRegister', function() {
+                // 注册返回按钮
+                lightbox.pswp.ui.registerElement({
+                    name: 'back-button',
+                    order: 7,
+                    isButton: true,
+                    html: '<i class="bi bi-arrow-left"></i>',
+                    onClick: (event, el) => {
+                        lightbox.pswp.close();
+                    }
+                });
+                
+                // 注册下载按钮
+                lightbox.pswp.ui.registerElement({
+                    name: 'download-button',
+                    order: 8,
+                    isButton: true,
+                    html: '<i class="bi bi-download"></i>',
+                    onClick: (event, el) => {
+                        const image = lightbox.pswp.currSlide.data.element;
+                        const link = document.createElement('a');
+                        link.href = image.href;
+                        link.download = image.querySelector('img').alt || 'image';
+                        link.style.display = 'none';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    }
+                });
+            });
+
+            // 预加载图片尺寸
+            const images = document.querySelectorAll('#gallery a');
+            images.forEach(link => {
+                const img = link.querySelector('img');
+                if (img.complete) {
+                    link.setAttribute('data-pswp-width', img.naturalWidth);
+                    link.setAttribute('data-pswp-height', img.naturalHeight);
+                } else {
+                    img.onload = () => {
+                        link.setAttribute('data-pswp-width', img.naturalWidth);
+                        link.setAttribute('data-pswp-height', img.naturalHeight);
+                    };
+                }
+            });
+
+            lightbox.init();
+        });
+    </script>
+</body>
+</html>
