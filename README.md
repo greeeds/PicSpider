@@ -75,6 +75,10 @@ pip install flask requests beautifulsoup4
 
 3. 运行应用：
 ```bash
+python main.py
+```
+开始爬取图片，并等待爬取完毕后在运行下面的操作
+```bash
 python app.py
 ```
 
