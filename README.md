@@ -1,4 +1,4 @@
-# PicSpider 写真相册展示系统
+# PicSpider 写真爬取展示
 
 ## 项目简介
 
