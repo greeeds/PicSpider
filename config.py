@@ -90,18 +90,52 @@ class Config:
     
     def get_templates_dir(self):
         """获取模板目录路径"""
+        possible_paths = []
+
         if self.is_frozen:
-            # 打包后，模板文件在_internal目录中
-            return str(self.app_dir / "_internal" / "templates")
+            # 打包后，模板文件可能在多个位置
+            possible_paths.extend([
+                self.app_dir / "_internal" / "templates",
+                self.app_dir / "templates",
+                Path(sys._MEIPASS) / "templates" if hasattr(sys, '_MEIPASS') else None,
+                Path(os.getcwd()) / "templates",  # 当前工作目录
+            ])
         else:
-            return str(self.app_dir / "templates")
+            # 开发环境
+            possible_paths.extend([
+                self.app_dir / "templates",
+                Path(os.getcwd()) / "templates",  # 当前工作目录
+            ])
+
+        # 过滤掉None值并查找存在的路径
+        for path in possible_paths:
+            if path and path.exists():
+                # 验证模板文件是否存在
+                if (path / "index.html").exists() and (path / "album.html").exists():
+                    return str(path)
+
+        # 如果都找不到，返回默认路径
+        return str(self.app_dir / "templates")
     
     def get_static_dir(self):
         """获取静态文件目录路径"""
         if self.is_frozen:
-            return str(self.app_dir / "_internal" / "static")
+            # 打包后，静态文件可能在多个位置
+            possible_paths = [
+                self.app_dir / "_internal" / "static",
+                self.app_dir / "static",
+                Path(sys._MEIPASS) / "static" if hasattr(sys, '_MEIPASS') else None
+            ]
+
+            for path in possible_paths:
+                if path and path.exists():
+                    return str(path)
+
+            # 如果都找不到，返回None（不使用静态文件）
+            return None
         else:
-            return str(self.app_dir / "static")
+            static_path = self.app_dir / "static"
+            return str(static_path) if static_path.exists() else None
 
 # 全局配置实例
 app_config = Config()

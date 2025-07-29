@@ -11,11 +11,36 @@ from config import app_config
 template_dir = app_config.get_templates_dir()
 static_dir = app_config.get_static_dir()
 
+# 调试信息
+print(f"Template directory: {template_dir}")
+print(f"Static directory: {static_dir}")
+print(f"Template directory exists: {os.path.exists(template_dir)}")
+if static_dir:
+    print(f"Static directory exists: {os.path.exists(static_dir)}")
+
+# 检查模板文件是否存在
+index_template = os.path.join(template_dir, 'index.html')
+album_template = os.path.join(template_dir, 'album.html')
+print(f"index.html exists: {os.path.exists(index_template)}")
+print(f"album.html exists: {os.path.exists(album_template)}")
+
+# 如果模板目录不存在，尝试使用当前目录下的templates
+if not os.path.exists(template_dir):
+    fallback_template_dir = os.path.join(os.getcwd(), 'templates')
+    if os.path.exists(fallback_template_dir):
+        print(f"Using fallback template directory: {fallback_template_dir}")
+        template_dir = fallback_template_dir
+
 # 创建Flask应用，指定模板和静态文件目录
-if os.path.exists(static_dir):
+if static_dir and os.path.exists(static_dir):
     app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
 else:
     app = Flask(__name__, template_folder=template_dir)
+
+# 配置Flask应用
+app.config['SERVER_NAME'] = None  # 允许在任何主机上运行
+app.config['APPLICATION_ROOT'] = '/'
+app.config['PREFERRED_URL_SCHEME'] = 'http'
 
 # --- 配置 ---
 PHOTO_DIR = app_config.get_photo_dir()
