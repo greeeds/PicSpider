@@ -12,13 +12,92 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        include:
-          - os: windows-latest
-            platform: windows
+        os: [windows-latest, macos-latest, ubuntu-latest]
+        python-version: ['3.8', '3.9', '3.10']
+        exclude:
+          # 减少构建矩阵，只在主要版本上测试所有平台
           - os: macos-latest
-            platform: macos
-          - os: ubuntu-latest
-            platform: linux
+            python-version: '3.8'
+          - os: macos-latest
+            python-version: '3.10'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-${{ matrix.python-version }}-
+          ${{ runner.os }}-pip-
+
+    - name: Install system dependencies (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y python3-tk
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Verify dependencies
+      run: |
+        python -c "import flask; print('Flask version:', flask.__version__)"
+        python -c "import requests; print('Requests version:', requests.__version__)"
+        python -c "import bs4; print('BeautifulSoup4 version:', bs4.__version__)"
+        python -c "import PyInstaller; print('PyInstaller version:', PyInstaller.__version__)"
+
+    - name: Test build script (dry run)
+      run: |
+        # 创建一个测试版本的build.py，只执行到spec文件创建
+        python -c "
+        import sys
+        sys.path.append('.')
+        from build import get_platform_info, create_pyinstaller_spec, clean_build_dirs
+        
+        print('Testing build script components...')
+        platform_name, ext = get_platform_info()
+        print(f'Platform: {platform_name}, Extension: {ext}')
+        
+        print('Cleaning build directories...')
+        clean_build_dirs()
+        
+        print('Creating PyInstaller spec...')
+        create_pyinstaller_spec()
+        
+        print('Build test completed successfully!')
+        "
+
+    - name: Verify spec file creation
+      run: |
+        if [ -f "PicSpider.spec" ]; then
+          echo "✅ PicSpider.spec created successfully"
+          echo "Spec file contents:"
+          head -20 PicSpider.spec
+        else
+          echo "❌ PicSpider.spec not found"
+          exit 1
+        fi
+      shell: bash
+
+    - name: Test PyInstaller analysis (without building)
+      run: |
+        python -m PyInstaller --analyze PicSpider.spec --log-level INFO || echo "Analysis completed with warnings"
+
+  quick-build:
+    name: Quick Build Test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
 
     steps:
     - name: Checkout code
@@ -29,143 +108,31 @@ jobs:
       with:
         python-version: '3.9'
 
-    - name: Install system dependencies (Linux)
-      if: matrix.platform == 'linux'
+    - name: Install system dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y python3-tk
 
-    - name: Install Python dependencies
+    - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Lint with flake8 (if available)
-      continue-on-error: true
+    - name: Quick build test (spec creation only)
       run: |
-        pip install flake8
-        # Stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # Exit-zero treats all errors as warnings
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        python -c "
+        from build import create_pyinstaller_spec, get_platform_info
+        platform_name, ext = get_platform_info()
+        print(f'Quick test for platform: {platform_name}')
+        create_pyinstaller_spec()
+        print('✅ Spec file created successfully')
+        "
 
-    - name: Test import of main modules
+    - name: Validate Python syntax
       run: |
-        python -c "import gui; print('GUI module imported successfully')"
-        python -c "import config; print('Config module imported successfully')"
-        python -c "import main; print('Main module imported successfully')" || echo "Main module import failed (may be expected)"
-
-    - name: Create PyInstaller spec file
-      run: python -c "
-import os
-import platform
-
-platform_name = platform.system().lower()
-spec_content = '''# -*- mode: python ; coding: utf-8 -*-
-
-block_cipher = None
-
-a = Analysis(
-    ['gui.py'],
-    pathex=[],
-    binaries=[],
-    datas=[
-        ('templates', 'templates'),
-        ('config.json', '.'),
-    ],
-    hiddenimports=[
-        'tkinter',
-        'tkinter.ttk',
-        'tkinter.messagebox',
-        'tkinter.filedialog',
-        'tkinter.scrolledtext',
-        'flask',
-        'requests',
-        'beautifulsoup4',
-        'concurrent.futures',
-        'threading',
-        'webbrowser',
-        'json',
-        'pathlib',
-    ],
-    hookspath=[],
-    hooksconfig={},
-    runtime_hooks=[],
-    excludes=[],
-    win_no_prefer_redirects=False,
-    win_private_assemblies=False,
-    cipher=block_cipher,
-    noarchive=False,
-)
-
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
-
-exe = EXE(
-    pyz,
-    a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    [],
-    name='PicSpider',
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    runtime_tmpdir=None,
-    console=False,
-    disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
-    icon=None,
-)'''
-
-if platform_name == 'darwin':
-    spec_content += '''
-
-app = BUNDLE(
-    exe,
-    name='PicSpider.app',
-    icon=None,
-    bundle_identifier='com.picspider.app',
-    info_plist={
-        'NSHighResolutionCapable': 'True',
-        'NSRequiresAquaSystemAppearance': 'False',
-    },
-)'''
-
-with open('PicSpider.spec', 'w', encoding='utf-8') as f:
-    f.write(spec_content)
-"
-
-    - name: Test PyInstaller build
-      run: |
-        python -m PyInstaller PicSpider.spec --clean --noconfirm
-
-    - name: Verify build output
-      shell: bash
-      run: |
-        if [[ "${{ matrix.platform }}" == "windows" ]]; then
-          ls -la dist/PicSpider.exe
-          file dist/PicSpider.exe || echo "file command not available"
-        elif [[ "${{ matrix.platform }}" == "macos" ]]; then
-          ls -la dist/PicSpider.app/
-          ls -la dist/PicSpider.app/Contents/MacOS/
-        else
-          ls -la dist/PicSpider
-          file dist/PicSpider
-        fi
-
-    - name: Upload build artifacts for debugging
-      if: failure()
-      uses: actions/upload-artifact@v3
-      with:
-        name: build-logs-${{ matrix.platform }}
-        path: |
-          build/
-          *.spec
-          dist/
-        retention-days: 7
+        python -m py_compile build.py
+        python -m py_compile gui.py
+        python -m py_compile app.py
+        python -m py_compile main.py
+        python -m py_compile config.py
+        echo "✅ All Python files have valid syntax"

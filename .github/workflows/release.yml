@@ -2,8 +2,7 @@ name: Build and Release
 
 on:
   release:
-    types: [created]
-  workflow_dispatch:  # Allow manual trigger for testing
+    types: [published]
 
 jobs:
   build:
@@ -15,17 +14,17 @@ jobs:
           - os: windows-latest
             platform: windows
             artifact_name: PicSpider-Windows
-            executable_extension: .exe
+            artifact_path: dist/
             archive_format: zip
           - os: macos-latest
             platform: macos
             artifact_name: PicSpider-macOS
-            executable_extension: .app
+            artifact_path: dist/
             archive_format: zip
           - os: ubuntu-latest
             platform: linux
             artifact_name: PicSpider-Linux
-            executable_extension: ""
+            artifact_path: dist/
             archive_format: tar.gz
 
     steps:
@@ -37,8 +36,16 @@ jobs:
       with:
         python-version: '3.9'
 
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
     - name: Install system dependencies (Linux)
-      if: matrix.platform == 'linux'
+      if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
         sudo apt-get install -y python3-tk
@@ -48,174 +55,59 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Create PyInstaller spec file
-      run: python -c "
-import os
-import platform
+    - name: Run build script
+      run: python build.py
 
-platform_name = platform.system().lower()
-spec_content = '''# -*- mode: python ; coding: utf-8 -*-
-
-block_cipher = None
-
-a = Analysis(
-    ['gui.py'],
-    pathex=[],
-    binaries=[],
-    datas=[
-        ('templates', 'templates'),
-        ('config.json', '.'),
-    ],
-    hiddenimports=[
-        'tkinter',
-        'tkinter.ttk',
-        'tkinter.messagebox',
-        'tkinter.filedialog',
-        'tkinter.scrolledtext',
-        'flask',
-        'requests',
-        'beautifulsoup4',
-        'concurrent.futures',
-        'threading',
-        'webbrowser',
-        'json',
-        'pathlib',
-    ],
-    hookspath=[],
-    hooksconfig={},
-    runtime_hooks=[],
-    excludes=[],
-    win_no_prefer_redirects=False,
-    win_private_assemblies=False,
-    cipher=block_cipher,
-    noarchive=False,
-)
-
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
-
-exe = EXE(
-    pyz,
-    a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    [],
-    name='PicSpider',
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    runtime_tmpdir=None,
-    console=False,
-    disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
-    icon=None,
-)'''
-
-if platform_name == 'darwin':
-    spec_content += '''
-
-app = BUNDLE(
-    exe,
-    name='PicSpider.app',
-    icon=None,
-    bundle_identifier='com.picspider.app',
-    info_plist={
-        'NSHighResolutionCapable': 'True',
-        'NSRequiresAquaSystemAppearance': 'False',
-    },
-)'''
-
-with open('PicSpider.spec', 'w', encoding='utf-8') as f:
-    f.write(spec_content)
-"
-
-    - name: Build with PyInstaller
+    - name: List dist contents (Debug)
       run: |
-        python -m PyInstaller PicSpider.spec --clean --noconfirm
-
-    - name: Create startup scripts and package files
+        echo "Contents of dist directory:"
+        ls -la dist/
       shell: bash
-      run: |
-        # Create package directory
-        mkdir -p package
-        
-        if [[ "${{ matrix.platform }}" == "windows" ]]; then
-          # Windows packaging
-          cp -r dist/PicSpider.exe package/
-          cp README.md package/ 2>/dev/null || echo "README.md not found, skipping"
-          cp config.json package/ 2>/dev/null || echo "config.json not found, skipping"
-          
-          # Create Windows startup script
-          cat > package/start.bat << 'EOF'
-        @echo off
-        cd /d "%~dp0"
-        PicSpider.exe
-        pause
-        EOF
-          
-        elif [[ "${{ matrix.platform }}" == "macos" ]]; then
-          # macOS packaging
-          cp -r dist/PicSpider.app package/
-          cp README.md package/ 2>/dev/null || echo "README.md not found, skipping"
-          cp config.json package/ 2>/dev/null || echo "config.json not found, skipping"
-          
-          # Create macOS startup script
-          cat > package/start.sh << 'EOF'
-        #!/bin/bash
-        cd "$(dirname "$0")"
-        open PicSpider.app
-        EOF
-          chmod +x package/start.sh
-          
-        else
-          # Linux packaging
-          cp -r dist/PicSpider package/
-          cp README.md package/ 2>/dev/null || echo "README.md not found, skipping"
-          cp config.json package/ 2>/dev/null || echo "config.json not found, skipping"
-          
-          # Create Linux startup script
-          cat > package/start.sh << 'EOF'
-        #!/bin/bash
-        cd "$(dirname "$0")"
-        ./PicSpider
-        EOF
-          chmod +x package/start.sh
-          chmod +x package/PicSpider
-        fi
 
-    - name: Create archive
+    - name: Create archive (Windows/macOS - ZIP)
+      if: matrix.archive_format == 'zip'
+      run: |
+        cd dist
+        if [ "${{ matrix.platform }}" = "windows" ]; then
+          7z a -tzip "../${{ matrix.artifact_name }}.zip" *
+        else
+          zip -r "../${{ matrix.artifact_name }}.zip" *
+        fi
       shell: bash
-      run: |
-        cd package
-        if [[ "${{ matrix.archive_format }}" == "zip" ]]; then
-          if command -v 7z &> /dev/null; then
-            7z a ../${{ matrix.artifact_name }}.zip .
-          else
-            zip -r ../${{ matrix.artifact_name }}.zip .
-          fi
-        else
-          tar -czf ../${{ matrix.artifact_name }}.tar.gz .
-        fi
 
-    - name: Upload to Release
-      if: github.event_name == 'release'
+    - name: Create archive (Linux - TAR.GZ)
+      if: matrix.archive_format == 'tar.gz'
+      run: |
+        cd dist
+        tar -czf "../${{ matrix.artifact_name }}.tar.gz" *
+
+    - name: Upload Release Asset (ZIP)
+      if: matrix.archive_format == 'zip'
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ${{ matrix.artifact_name }}.${{ matrix.archive_format }}
-        asset_name: ${{ matrix.artifact_name }}.${{ matrix.archive_format }}
-        asset_content_type: application/octet-stream
+        asset_path: ./${{ matrix.artifact_name }}.zip
+        asset_name: ${{ matrix.artifact_name }}.zip
+        asset_content_type: application/zip
 
-    - name: Upload artifacts (for workflow_dispatch)
-      if: github.event_name == 'workflow_dispatch'
+    - name: Upload Release Asset (TAR.GZ)
+      if: matrix.archive_format == 'tar.gz'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./${{ matrix.artifact_name }}.tar.gz
+        asset_name: ${{ matrix.artifact_name }}.tar.gz
+        asset_content_type: application/gzip
+
+    - name: Upload build artifacts (for debugging)
       uses: actions/upload-artifact@v3
       with:
-        name: ${{ matrix.artifact_name }}
-        path: ${{ matrix.artifact_name }}.${{ matrix.archive_format }}
+        name: ${{ matrix.artifact_name }}-debug
+        path: |
+          dist/
+          *.spec
+        retention-days: 7
