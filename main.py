@@ -6,6 +6,15 @@ import time
 from urllib.parse import urljoin
 import concurrent.futures
 from functools import partial
+import threading
+import signal
+import sys
+
+# 导入配置
+from config import app_config
+
+# 全局变量用于控制爬虫停止
+stop_crawler = False
 
 # 清理非法文件名
 def clean_filename(text):
@@ -83,20 +92,36 @@ def download_image(url, headers, folder_name, save_dir, retry=5):  # 增加重�
                 return False
         time.sleep(2 + attempt)  # 递增等待时间
 
-def download_images(page_info, save_dir='downloaded'):
+def download_images(page_info, save_dir=None, log_callback=None):
+    global stop_crawler
+
+    if save_dir is None:
+        save_dir = app_config.get_photo_dir()
+
+    def log(message):
+        if log_callback:
+            log_callback(message)
+        else:
+            print(message)
+
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Referer': page_info['url'],
         'Accept-Encoding': 'gzip, deflate',
         'Connection': 'keep-alive'
     }
-    
+
     folder_name = clean_filename(page_info['title'])
     folder_path = os.path.join(save_dir, folder_name)
     
     # 检查文件夹是否已存在
     if os.path.exists(folder_path) and os.path.isdir(folder_path):
-        print(f"文件夹已存在，跳过: {folder_name}")
+        log(f"文件夹已存在，跳过: {folder_name}")
+        return
+
+    # 检查是否需要停止
+    if stop_crawler:
+        log("爬虫已停止")
         return
     
     os.makedirs(folder_path, exist_ok=True)
@@ -137,78 +162,119 @@ def download_images(page_info, save_dir='downloaded'):
         
         # 使用线程池并行下载
         try:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:  # 增加到5个线程
-                download_func = partial(download_image, headers=headers, 
+            max_workers = app_config.get("max_workers", 5)
+            download_delay = app_config.get("download_delay", 0.5)
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+                download_func = partial(download_image, headers=headers,
                                      folder_name=folder_name, save_dir=save_dir)
                 futures = []
                 for url in final_urls:
+                    if stop_crawler:
+                        break
                     futures.append(executor.submit(download_func, url))
-                    time.sleep(0.5)  # 减少下载间隔以提高效率
+                    time.sleep(download_delay)
                 
                 # 等待所有任务完成
                 concurrent.futures.wait(futures)
                 
         except KeyboardInterrupt:
-            print("\n检测到用户中断，正在安全退出...")
+            log("\n检测到用户中断，正在安全退出...")
             executor.shutdown(wait=False)
             return
         except Exception as e:
-            print(f"下载过程出错: {str(e)}")
+            log(f"下载过程出错: {str(e)}")
             
     except requests.exceptions.SSLError:
-        print(f"SSL错误，尝试不验证SSL: {page_info['url']}")
+        log(f"SSL错误，尝试不验证SSL: {page_info['url']}")
         # 可以在这里添加重试逻辑
     except Exception as e:
-        print(f"处理页面失败 {page_info['url']}: {str(e)}")
+        log(f"处理页面失败 {page_info['url']}: {str(e)}")
 
 # 获取下一页
 def get_next_page(soup, base_url):
     next_link = soup.select_one('a.next.page-numbers')
     return urljoin(base_url, next_link['href']) if next_link else None
 
-def process_category(base_url, max_pages=200):
+def process_category(base_url, max_pages=200, log_callback=None):
+    global stop_crawler
+
+    def log(message):
+        if log_callback:
+            log_callback(message)
+        else:
+            print(message)
+
     current_url = base_url
     page_count = 0
-    
-    while current_url and page_count < max_pages:
-        print(f"\n正在处理第 {page_count + 1} 页: {current_url}")
+
+    while current_url and page_count < max_pages and not stop_crawler:
+        log(f"\n正在处理第 {page_count + 1} 页: {current_url}")
         target_pages = get_target_links(current_url)
-        
+
         if not target_pages:
-            print("没有找到目标页面，跳过此页")
+            log("没有找到目标页面，跳过此页")
             break
-            
+
         for page in target_pages:
-            print(f"处理: {page['title']} - {page['url']}")
-            download_images(page)
+            if stop_crawler:
+                break
+            log(f"处理: {page['title']} - {page['url']}")
+            download_images(page, log_callback=log_callback)
             time.sleep(1)
             
         # 获取下一页
         try:
+            if stop_crawler:
+                break
             response = requests.get(current_url, timeout=10)
             soup = BeautifulSoup(response.text, 'html.parser')
             current_url = get_next_page(soup, current_url)
         except Exception as e:
-            print(f"获取下一页失败: {str(e)}")
+            log(f"获取下一页失败: {str(e)}")
             break
-            
+
         page_count += 1
         time.sleep(2)
 
-if __name__ == '__main__':
-    # 使用字典存储每个分类及其对应的最大页数
-    categories = {
+def start_crawler(log_callback=None):
+    """启动爬虫的主函数，支持从GUI调用"""
+    global stop_crawler
+    stop_crawler = False
 
+    def log(message):
+        if log_callback:
+            log_callback(message)
+        else:
+            print(message)
+
+    # 从配置获取分类信息
+    categories = app_config.get("categories", {
         'https://everia.club/category/gravure/': 287,
-        'https://everia.club/category/japan/' : 274,
+        'https://everia.club/category/japan/': 274,
         'https://everia.club/category/korea/': 175,
         'https://everia.club/category/chinese/': 256,
         'https://everia.club/category/cosplay/': 115,
-    }
-    
+    })
+
+    log("开始爬取图片...")
+
     for category_url, max_pages in categories.items():
-        print(f"\n开始处理分类: {category_url}")
+        if stop_crawler:
+            break
+        log(f"\n开始处理分类: {category_url}")
         try:
-            process_category(category_url, max_pages)
+            process_category(category_url, max_pages, log_callback)
         except Exception as e:
-            print(f"处理分类 {category_url} 时出错: {str(e)}")
+            log(f"处理分类 {category_url} 时出错: {str(e)}")
+
+    log("爬虫任务完成")
+
+def stop_crawler_func():
+    """停止爬虫"""
+    global stop_crawler
+    stop_crawler = True
+
+if __name__ == '__main__':
+    # 命令行模式运行
+    start_crawler()

@@ -1,13 +1,26 @@
 import os
 import math
+import sys
+from pathlib import Path
 from flask import Flask, render_template, url_for, send_from_directory, abort, request
 
-app = Flask(__name__) # Flask 会自动查找 static 文件夹
+# 导入配置
+from config import app_config
+
+# 获取模板和静态文件目录
+template_dir = app_config.get_templates_dir()
+static_dir = app_config.get_static_dir()
+
+# 创建Flask应用，指定模板和静态文件目录
+if os.path.exists(static_dir):
+    app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
+else:
+    app = Flask(__name__, template_folder=template_dir)
 
 # --- 配置 ---
-PHOTO_DIR = r"downloaded" # !!! 务必确认路径正确 !!!
+PHOTO_DIR = app_config.get_photo_dir()
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-ALBUMS_PER_PAGE = 12
+ALBUMS_PER_PAGE = app_config.get("albums_per_page", 12)
 
 # --- 内存缓存 ---
 # 使用一个字典来缓存相册名 -> 缩略图文件名的映射
@@ -65,7 +78,7 @@ def index():
     all_albums_data = []
     if not os.path.isdir(PHOTO_DIR):
         print(f"错误：找不到目录 {PHOTO_DIR}")
-        return "错误：配置的图片目录不存在。", 500
+        return f"错误：配置的图片目录不存在: {PHOTO_DIR}", 500
 
     try:
         all_items = sorted(os.listdir(PHOTO_DIR))
@@ -137,5 +150,17 @@ def get_image(album_name, filename):
       print(f"警告：在相册 {album_name} 中未找到文件 {filename}")
       abort(404)
 
+def run_app(host=None, port=None, debug=None):
+    """运行Flask应用"""
+    host = host or app_config.get("flask_host", "127.0.0.1")
+    port = port or app_config.get("flask_port", 5000)
+    debug = debug if debug is not None else app_config.get("flask_debug", False)
+
+    print(f"启动Web服务器: http://{host}:{port}")
+    print(f"图片目录: {PHOTO_DIR}")
+    print(f"模板目录: {template_dir}")
+
+    app.run(debug=debug, host=host, port=port, use_reloader=False)
+
 if __name__ == '__main__':
-  app.run(debug=True, host='0.0.0.0', port=5000)
+    run_app()

@@ -48,49 +48,100 @@ PicSpider是一个优雅的写真相册展示系统，提供了简洁美观的�
                     # - 支持增量更新
 ```
 
-## 安装和运行
+## 快速开始
 
-1. 确保已安装Python 
+### 方式一：使用安装脚本（推荐）
 
-2. 安装依赖包：
-
-推荐使用虚拟环境安装依赖：
+1. **自动安装**：
 ```bash
-# 创建虚拟环境
-python -m venv venv
+python install.py
+```
+安装脚本会自动：
+- 检查Python版本
+- 安装所有依赖
+- 检查环境配置
+- 可选创建桌面快捷方式
 
-# 激活虚拟环境
-# Windows:
-venv\Scripts\activate
-# Linux/Mac:
-source venv/bin/activate
-
-# 安装依赖包
-pip install flask requests beautifulsoup4
-
-# 或者使用requirements.txt安装
-# pip install -r requirements.txt
+2. **启动应用**：
+```bash
+python run.py
 ```
 
-项目依赖说明：
-- Flask: Web应用框架
-- requests: HTTP请求库
-- beautifulsoup4: HTML解析库
+### 方式二：手动安装
 
-3. 运行应用：
+1. **确保Python版本**：需要Python 3.7或更高版本
+
+2. **安装依赖包**：
 ```bash
+pip install -r requirements.txt
+```
+
+3. **运行应用**：
+```bash
+# GUI模式（推荐）
+python run.py
+
+# 或者分别运行
+python gui.py
+```
+
+## 使用方式
+
+### GUI界面模式（推荐）
+```bash
+python run.py
+```
+提供友好的图形界面，包含：
+- 爬虫控制和配置
+- Web服务器管理
+- 实时日志显示
+- 配置管理
+
+### 命令行模式
+```bash
+# 只运行爬虫
+python run.py --mode crawler
+
+# 只运行Web服务器
+python run.py --mode server --host 0.0.0.0 --port 8000
+
+# 启用调试模式
+python run.py --mode server --debug
+```
+
+### 传统方式
+```bash
+# 先运行爬虫
 python main.py
-```
-开始爬取图片，并等待爬取完毕后在运行下面的操作
-```bash
+
+# 再启动Web服务
 python app.py
 ```
 
-4. 访问应用：
-   打开浏览器访问 `http://localhost:5000`
+## 打包成独立应用
 
-## 使用说明
+支持打包成跨平台的独立可执行文件：
 
+```bash
+python build.py
+```
+
+打包后的应用位于 `dist/` 目录，可以在没有Python环境的机器上直接运行。
+
+支持的平台：
+- Windows (.exe)
+- macOS (.app)
+- Linux (可执行文件)
+
+## 功能说明
+
+### GUI界面功能
+- **主页**：一键启动爬虫和Web服务，查看运行状态
+- **爬虫配置**：设置下载目录、线程数、延迟等参数
+- **服务器配置**：配置Web服务器地址、端口等
+- **日志查看**：实时查看运行日志和错误信息
+
+### Web界面功能
 1. **浏览相册**
    - 首页以网格形式展示所有相册
    - 点击相册可进入详情页查看完整图片集
@@ -103,6 +154,69 @@ python app.py
 3. **查看图片**
    - 在相册详情页面可查看所有图片
    - 支持图片放大、滑动浏览等功能
+
+### 配置管理
+- 自动生成配置文件 `config.json`
+- 支持自定义下载目录、服务器设置等
+- 配置更改实时生效
+
+## 文件结构
+
+```
+PicSpider/
+├── gui.py              # GUI主界面
+├── app.py              # Flask Web服务器
+├── main.py             # 爬虫核心模块
+├── config.py           # 配置管理
+├── run.py              # 统一启动脚本
+├── install.py          # 自动安装脚本
+├── build.py            # 打包构建脚本
+├── requirements.txt    # Python依赖
+├── config.json         # 配置文件（自动生成）
+├── templates/          # Web模板
+│   ├── index.html      # 首页模板
+│   └── album.html      # 相册详情页模板
+└── downloaded/         # 图片存储目录（自动创建）
+```
+
+## 系统要求
+
+- **Python**: 3.7或更高版本
+- **操作系统**: Windows 7+, macOS 10.12+, Linux
+- **内存**: 建议2GB以上
+- **存储**: 根据下载内容而定
+- **网络**: 需要互联网连接进行爬取
+
+## 常见问题
+
+### Q: GUI界面无法启动？
+A: 请确保安装了tkinter：
+- Ubuntu/Debian: `sudo apt-get install python3-tk`
+- CentOS/RHEL: `sudo yum install tkinter`
+- Windows/macOS: 通常已包含在Python中
+
+### Q: 爬虫下载失败？
+A: 检查网络连接和目标网站状态，可以调整重试次数和延迟时间
+
+### Q: Web服务无法访问？
+A: 检查防火墙设置，确保端口未被占用
+
+### Q: 打包后的应用无法运行？
+A: 确保目标机器的操作系统架构匹配，检查是否缺少系统依赖
+
+## 开发说明
+
+### 添加新的爬取源
+1. 修改 `config.json` 中的 `categories` 配置
+2. 根据需要调整 `main.py` 中的解析逻辑
+
+### 自定义界面
+1. 修改 `templates/` 目录下的HTML模板
+2. 调整 `app.py` 中的路由和逻辑
+
+### 扩展功能
+1. 在 `gui.py` 中添加新的界面组件
+2. 在 `config.py` 中添加新的配置选项
 
 ## 爬虫功能
 
