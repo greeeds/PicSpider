@@ -57,6 +57,9 @@ jobs:
 
     - name: Run build script
       run: python build.py
+      env:
+        PYTHONIOENCODING: utf-8
+        PYTHONUTF8: 1
 
     - name: List dist contents (Debug)
       run: |

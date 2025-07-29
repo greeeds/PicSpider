@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-PicSpider 打包脚本
-支持Windows、macOS、Linux跨平台打包
+PicSpider Build Script
+Cross-platform packaging for Windows, macOS, Linux
 """
 
 import os
@@ -11,11 +12,19 @@ import subprocess
 import platform
 from pathlib import Path
 
+# Set UTF-8 encoding for Windows
+if sys.platform.startswith('win'):
+    import locale
+    if sys.stdout.encoding != 'utf-8':
+        sys.stdout.reconfigure(encoding='utf-8')
+    if sys.stderr.encoding != 'utf-8':
+        sys.stderr.reconfigure(encoding='utf-8')
+
 def get_platform_info():
-    """获取平台信息"""
+    """Get platform information"""
     system = platform.system().lower()
     arch = platform.machine().lower()
-    
+
     if system == "windows":
         return "windows", "exe"
     elif system == "darwin":
@@ -26,35 +35,35 @@ def get_platform_info():
         return "unknown", ""
 
 def clean_build_dirs():
-    """清理构建目录"""
+    """Clean build directories"""
     dirs_to_clean = ["build", "dist", "__pycache__"]
     for dir_name in dirs_to_clean:
         if os.path.exists(dir_name):
-            print(f"清理目录: {dir_name}")
+            print(f"Cleaning directory: {dir_name}")
             shutil.rmtree(dir_name)
-    
-    # 清理.spec文件
+
+    # Clean .spec files
     spec_files = [f for f in os.listdir(".") if f.endswith(".spec")]
     for spec_file in spec_files:
-        print(f"删除文件: {spec_file}")
+        print(f"Removing file: {spec_file}")
         os.remove(spec_file)
 
 def install_dependencies():
-    """安装依赖"""
-    print("安装依赖包...")
+    """Install dependencies"""
+    print("Installing dependencies...")
     try:
-        subprocess.run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], 
+        subprocess.run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"],
                       check=True)
-        print("依赖安装完成")
+        print("Dependencies installed successfully")
     except subprocess.CalledProcessError as e:
-        print(f"依赖安装失败: {e}")
+        print(f"Failed to install dependencies: {e}")
         return False
     return True
 
 def create_pyinstaller_spec():
-    """创建PyInstaller配置文件"""
+    """Create PyInstaller configuration file"""
     platform_name, ext = get_platform_info()
-    
+
     spec_content = f'''# -*- mode: python ; coding: utf-8 -*-
 
 block_cipher = None
@@ -135,44 +144,44 @@ app = BUNDLE(
 
     with open("PicSpider.spec", "w", encoding="utf-8") as f:
         f.write(spec_content)
-    
-    print("PyInstaller配置文件已创建: PicSpider.spec")
+
+    print("PyInstaller configuration file created: PicSpider.spec")
 
 def build_application():
-    """构建应用程序"""
-    print("开始构建应用程序...")
-    
+    """Build application"""
+    print("Starting application build...")
+
     try:
-        # 使用PyInstaller构建
+        # Build with PyInstaller
         cmd = [sys.executable, "-m", "PyInstaller", "PicSpider.spec", "--clean"]
         subprocess.run(cmd, check=True)
-        print("应用程序构建完成")
+        print("Application build completed")
         return True
     except subprocess.CalledProcessError as e:
-        print(f"构建失败: {e}")
+        print(f"Build failed: {e}")
         return False
 
 def copy_additional_files():
-    """复制额外的文件到dist目录"""
+    """Copy additional files to dist directory"""
     dist_dir = Path("dist")
     if not dist_dir.exists():
-        print("dist目录不存在")
+        print("dist directory does not exist")
         return
-    
-    # 查找应用程序目录
+
+    # Find application directory
     app_dirs = [d for d in dist_dir.iterdir() if d.is_dir()]
     if not app_dirs:
-        print("未找到应用程序目录")
+        print("Application directory not found")
         return
-    
-    app_dir = app_dirs[0]  # 通常是第一个目录
-    
-    # 复制README文件
+
+    app_dir = app_dirs[0]  # Usually the first directory
+
+    # Copy README file
     if os.path.exists("README.md"):
         shutil.copy2("README.md", app_dir / "README.md")
-        print("已复制README.md")
-    
-    # 创建示例配置文件
+        print("README.md copied")
+
+    # Create example configuration file
     config_example = {
         "photo_dir": "downloaded",
         "albums_per_page": 12,
@@ -190,19 +199,19 @@ def copy_additional_files():
             "https://everia.club/category/cosplay/": 115
         }
     }
-    
+
     import json
     with open(app_dir / "config.json", "w", encoding="utf-8") as f:
         json.dump(config_example, f, indent=2, ensure_ascii=False)
-    print("已创建配置文件")
+    print("Configuration file created")
 
 def create_startup_scripts():
-    """创建启动脚本"""
+    """Create startup scripts"""
     platform_name, ext = get_platform_info()
     dist_dir = Path("dist")
-    
+
     if platform_name == "windows":
-        # Windows批处理文件
+        # Windows batch file
         bat_content = '''@echo off
 cd /d "%~dp0"
 PicSpider.exe
@@ -210,10 +219,10 @@ pause
 '''
         with open(dist_dir / "start.bat", "w", encoding="utf-8") as f:
             f.write(bat_content)
-        print("已创建Windows启动脚本: start.bat")
-        
+        print("Windows startup script created: start.bat")
+
     elif platform_name in ["macos", "linux"]:
-        # Unix shell脚本
+        # Unix shell script
         sh_content = '''#!/bin/bash
 cd "$(dirname "$0")"
 ./PicSpider
@@ -221,57 +230,57 @@ cd "$(dirname "$0")"
         script_path = dist_dir / "start.sh"
         with open(script_path, "w", encoding="utf-8") as f:
             f.write(sh_content)
-        # 添加执行权限
+        # Add execute permission
         os.chmod(script_path, 0o755)
-        print("已创建Unix启动脚本: start.sh")
+        print("Unix startup script created: start.sh")
 
 def main():
-    """主函数"""
-    print("PicSpider 应用程序打包工具")
+    """Main function"""
+    print("PicSpider Application Build Tool")
     print("=" * 50)
-    
+
     platform_name, ext = get_platform_info()
-    print(f"当前平台: {platform_name}")
-    
-    # 检查Python版本
+    print(f"Current platform: {platform_name}")
+
+    # Check Python version
     if sys.version_info < (3, 7):
-        print("错误: 需要Python 3.7或更高版本")
+        print("Error: Python 3.7 or higher is required")
         return False
-    
-    # 步骤1: 清理构建目录
-    print("\n步骤1: 清理构建目录")
+
+    # Step 1: Clean build directories
+    print("\nStep 1: Clean build directories")
     clean_build_dirs()
-    
-    # 步骤2: 安装依赖
-    print("\n步骤2: 安装依赖")
+
+    # Step 2: Install dependencies
+    print("\nStep 2: Install dependencies")
     if not install_dependencies():
         return False
-    
-    # 步骤3: 创建PyInstaller配置
-    print("\n步骤3: 创建PyInstaller配置")
+
+    # Step 3: Create PyInstaller configuration
+    print("\nStep 3: Create PyInstaller configuration")
     create_pyinstaller_spec()
-    
-    # 步骤4: 构建应用程序
-    print("\n步骤4: 构建应用程序")
+
+    # Step 4: Build application
+    print("\nStep 4: Build application")
     if not build_application():
         return False
-    
-    # 步骤5: 复制额外文件
-    print("\n步骤5: 复制额外文件")
+
+    # Step 5: Copy additional files
+    print("\nStep 5: Copy additional files")
     copy_additional_files()
-    
-    # 步骤6: 创建启动脚本
-    print("\n步骤6: 创建启动脚本")
+
+    # Step 6: Create startup scripts
+    print("\nStep 6: Create startup scripts")
     create_startup_scripts()
-    
+
     print("\n" + "=" * 50)
-    print("打包完成！")
-    print(f"应用程序位于: dist/")
-    print("\n使用说明:")
-    print("1. 进入dist目录")
-    print("2. 运行PicSpider可执行文件")
-    print("3. 或者使用提供的启动脚本")
-    
+    print("Build completed!")
+    print(f"Application located at: dist/")
+    print("\nUsage instructions:")
+    print("1. Navigate to dist directory")
+    print("2. Run PicSpider executable")
+    print("3. Or use the provided startup scripts")
+
     return True
 
 if __name__ == "__main__":
