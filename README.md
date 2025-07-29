@@ -1,5 +1,8 @@
 # PicSpider 写真爬取展示
 
+[![Build Test](https://github.com/YOUR_USERNAME/PicSpider/actions/workflows/build-test.yml/badge.svg)](https://github.com/YOUR_USERNAME/PicSpider/actions/workflows/build-test.yml)
+[![Release](https://github.com/YOUR_USERNAME/PicSpider/actions/workflows/release.yml/badge.svg)](https://github.com/YOUR_USERNAME/PicSpider/actions/workflows/release.yml)
+
 ## 项目简介
 
 PicSpider是一个优雅的写真相册展示系统，提供了简洁美观的界面来浏览和管理图片相册。系统采用现代化的UI设计，支持相册预览、图片浏览、搜索等功能，为用户提供流畅的浏览体验。
@@ -139,6 +142,10 @@ python build.py
 
 项目配置了GitHub Actions工作流，可以自动进行跨平台构建和发布：
 
+#### 工作流说明
+- **Release工作流**: 在创建GitHub Release时自动触发，执行跨平台构建
+- **构建测试工作流**: 在代码推送和PR时运行，验证构建脚本的正确性
+
 #### 创建发布版本
 1. 为你的代码创建标签：
    ```bash
@@ -168,6 +175,12 @@ python build.py
 ```bash
 python scripts/test-build.py
 ```
+
+#### 构建环境
+- **Python版本**: 3.9
+- **支持平台**: Windows、macOS、Linux
+- **构建工具**: PyInstaller
+- **依赖缓存**: 自动缓存pip依赖以加速构建
 
 更多详细信息请查看 [GitHub工作流文档](.github/README.md)。
 

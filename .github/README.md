@@ -1,151 +1,212 @@
-# GitHub Workflows for PicSpider
+# GitHub Workflows 说明
 
-This directory contains GitHub Actions workflows for automated building and releasing of PicSpider across multiple platforms.
+本项目配置了自动化的GitHub Actions工作流，用于自动构建和发布PicSpider应用程序。
 
-## Workflows
+## 工作流概述
 
-### 1. Release Workflow (`release.yml`)
+### 1. Release工作流 (`release.yml`)
 
-**Trigger**: Automatically runs when a new GitHub release is created
+**触发条件**: 当创建新的GitHub Release时自动触发
 
-**Platforms**: 
-- Windows (creates `.exe`)
-- macOS (creates `.app` bundle)
-- Linux (creates executable)
+**功能**:
+- 在Windows、macOS、Linux三个平台上自动构建应用程序
+- 执行`build.py`脚本进行打包
+- 将构建产物自动上传到Release页面
 
-**What it does**:
-1. Sets up Python 3.9 environment on each platform
-2. Installs dependencies from `requirements.txt`
-3. Creates platform-specific PyInstaller spec files
-4. Builds the application using PyInstaller
-5. Creates startup scripts for each platform
-6. Packages the built application with documentation
-7. Uploads the packages to the GitHub release
+**构建产物**:
+- `PicSpider-Windows.zip` - Windows可执行文件包
+- `PicSpider-macOS.zip` - macOS应用程序包  
+- `PicSpider-Linux.tar.gz` - Linux可执行文件包
 
-**Output files**:
-- `PicSpider-Windows.zip` - Windows executable with startup script
-- `PicSpider-macOS.zip` - macOS app bundle with startup script  
-- `PicSpider-Linux.tar.gz` - Linux executable with startup script
+### 2. 构建测试工作流 (`build-test.yml`)
 
-### 2. Build Test Workflow (`build-test.yml`)
+**触发条件**: 
+- 推送到main/master/gui分支时
+- 创建Pull Request时
 
-**Trigger**: Runs on pushes and pull requests to main/master/develop branches
+**功能**:
+- 测试构建脚本在不同平台和Python版本上的兼容性
+- 验证依赖安装和PyInstaller配置
+- 快速语法检查和构建测试
 
-**Purpose**: Tests that the application can be built successfully on all platforms without creating releases
+## 如何发布新版本
 
-**What it does**:
-1. Tests Python module imports
-2. Runs basic linting (if flake8 is available)
-3. Performs test builds on all platforms
-4. Verifies build outputs
-5. Uploads build artifacts if builds fail (for debugging)
+### 方法一: 通过GitHub网页界面
 
-## How to Create a Release
-
-1. **Tag your code**: Create a git tag for your release
+1. **创建标签**:
    ```bash
    git tag v1.0.0
    git push origin v1.0.0
    ```
 
-2. **Create GitHub Release**: Go to your repository on GitHub
-   - Click "Releases" → "Create a new release"
-   - Choose your tag (v1.0.0)
-   - Fill in release title and description
-   - Click "Publish release"
+2. **创建Release**:
+   - 访问GitHub仓库页面
+   - 点击 "Releases" → "Create a new release"
+   - 选择刚创建的标签 (v1.0.0)
+   - 填写发布标题和说明
+   - 点击 "Publish release"
 
-3. **Automatic Build**: The workflow will automatically:
-   - Build for Windows, macOS, and Linux
-   - Upload the packages to your release
-   - Takes about 10-15 minutes to complete
+3. **自动构建**:
+   - GitHub Actions会自动开始构建
+   - 大约10-15分钟后构建完成
+   - 构建产物会自动上传到Release页面
 
-## Manual Testing
+### 方法二: 通过GitHub CLI
 
-You can also trigger the release workflow manually:
+```bash
+# 安装GitHub CLI (如果未安装)
+# 详见: https://cli.github.com/
 
-1. Go to "Actions" tab in your GitHub repository
-2. Select "Build and Release" workflow
-3. Click "Run workflow"
-4. Choose the branch and click "Run workflow"
+# 创建标签并推送
+git tag v1.0.0
+git push origin v1.0.0
 
-This will build the applications but upload them as workflow artifacts instead of to a release.
-
-## Troubleshooting
-
-### Build Failures
-
-If builds fail, check the workflow logs:
-1. Go to "Actions" tab
-2. Click on the failed workflow run
-3. Click on the failed job to see detailed logs
-
-Common issues:
-- **Missing dependencies**: Make sure all required packages are in `requirements.txt`
-- **Import errors**: Ensure all Python modules can be imported
-- **Platform-specific issues**: Some packages may not be available on all platforms
-
-### Linux GUI Dependencies
-
-The workflow installs `python3-tk` on Linux for tkinter support. If you need additional GUI libraries, add them to the Linux dependencies section in the workflow.
-
-### macOS Code Signing
-
-Currently, the macOS builds are not code-signed. Users may need to:
-1. Right-click the app and select "Open"
-2. Or go to System Preferences → Security & Privacy and allow the app
-
-For production releases, consider adding code signing certificates.
-
-## Customization
-
-### Adding New Platforms
-
-To add support for additional platforms, modify the `matrix` section in `release.yml`:
-
-```yaml
-matrix:
-  include:
-    - os: your-new-os
-      platform: platform-name
-      artifact_name: PicSpider-PlatformName
-      executable_extension: .ext
-      archive_format: zip
+# 创建Release
+gh release create v1.0.0 \
+  --title "PicSpider v1.0.0" \
+  --notes "发布说明：
+  - 新增功能A
+  - 修复问题B
+  - 性能优化C"
 ```
 
-### Changing Python Version
+## 构建过程详解
 
-Update the `python-version` in both workflow files:
+### 构建环境
+- **Windows**: windows-latest (Windows Server 2022)
+- **macOS**: macos-latest (macOS 12)
+- **Linux**: ubuntu-latest (Ubuntu 22.04)
+- **Python版本**: 3.9
+
+### 构建步骤
+1. **环境准备**:
+   - 检出代码
+   - 设置Python环境
+   - 缓存pip依赖
+
+2. **依赖安装**:
+   - 安装系统依赖 (Linux需要python3-tk)
+   - 安装Python依赖包
+
+3. **执行构建**:
+   - 运行`python build.py`
+   - 生成跨平台可执行文件
+
+4. **打包上传**:
+   - 创建压缩包
+   - 上传到Release页面
+
+## 本地测试构建
+
+在提交代码前，建议先本地测试构建：
+
+```bash
+# 测试构建脚本
+python build.py
+
+# 或使用测试脚本
+python scripts/test-build.py
+```
+
+## 故障排除
+
+### 常见问题
+
+1. **构建失败 - 依赖问题**:
+   - 检查`requirements.txt`是否包含所有必需依赖
+   - 确认依赖版本兼容性
+
+2. **构建失败 - 平台特定问题**:
+   - Linux: 确保安装了`python3-tk`
+   - macOS: 检查是否需要额外的系统权限
+   - Windows: 确认PyInstaller配置正确
+
+3. **上传失败**:
+   - 检查Release是否已正确创建
+   - 确认GitHub token权限
+
+### 调试方法
+
+1. **查看构建日志**:
+   - 在GitHub Actions页面查看详细日志
+   - 关注错误信息和警告
+
+2. **下载调试产物**:
+   - 每次构建都会上传调试产物
+   - 包含dist目录和spec文件
+   - 保留7天用于问题排查
+
+3. **本地复现**:
+   - 使用相同的Python版本
+   - 安装相同的依赖版本
+   - 运行相同的构建命令
+
+## 自定义配置
+
+### 修改构建平台
+
+编辑`.github/workflows/release.yml`中的matrix配置：
+
+```yaml
+strategy:
+  matrix:
+    include:
+      - os: windows-latest
+        platform: windows
+        # ... 其他配置
+```
+
+### 修改Python版本
 
 ```yaml
 - name: Set up Python
   uses: actions/setup-python@v4
   with:
-    python-version: '3.10'  # Change this
+    python-version: '3.9'  # 修改为需要的版本
 ```
 
-### Adding Build Steps
+### 添加额外步骤
 
-Add new steps before or after the existing build steps. For example, to run tests:
+在构建步骤中添加自定义操作：
 
 ```yaml
-- name: Run tests
+- name: Custom step
   run: |
-    python -m pytest tests/
+    echo "执行自定义操作"
+    # 你的自定义命令
 ```
 
-## Security Notes
+## 版本管理建议
 
-- The workflows use `GITHUB_TOKEN` which is automatically provided by GitHub
-- No additional secrets are required for basic functionality
-- For code signing, you would need to add signing certificates as repository secrets
+### 语义化版本
 
-## File Structure After Build
+建议使用语义化版本号：
+- `v1.0.0` - 主要版本
+- `v1.1.0` - 次要版本  
+- `v1.1.1` - 补丁版本
 
-Each platform package contains:
-```
-PicSpider-Platform/
-├── PicSpider(.exe/.app)     # Main executable
-├── README.md                # Project documentation
-├── config.json              # Configuration file
-└── start.(bat/sh)           # Platform-specific startup script
+### 发布频率
+
+- **稳定版本**: 每月发布一次主要更新
+- **补丁版本**: 根据bug修复需要随时发布
+- **预发布版本**: 使用`v1.0.0-beta.1`格式
+
+### 发布说明模板
+
+```markdown
+## 新增功能
+- 功能A: 详细说明
+- 功能B: 详细说明
+
+## 问题修复  
+- 修复问题A
+- 修复问题B
+
+## 性能优化
+- 优化项A
+- 优化项B
+
+## 注意事项
+- 重要变更说明
+- 兼容性说明
 ```
