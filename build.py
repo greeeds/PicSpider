@@ -74,6 +74,7 @@ a = Analysis(
     binaries=[],
     datas=[
         ('templates', 'templates'),
+        ('templates/*', 'templates'),  # 确保模板文件被包含
         ('config.json', '.'),
     ],
     hiddenimports=[
