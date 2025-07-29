@@ -120,6 +120,8 @@ python app.py
 
 ## 打包成独立应用
 
+### 本地打包
+
 支持打包成跨平台的独立可执行文件：
 
 ```bash
@@ -132,6 +134,42 @@ python build.py
 - Windows (.exe)
 - macOS (.app)
 - Linux (可执行文件)
+
+### 自动化构建和发布
+
+项目配置了GitHub Actions工作流，可以自动进行跨平台构建和发布：
+
+#### 创建发布版本
+1. 为你的代码创建标签：
+   ```bash
+   git tag v1.0.0
+   git push origin v1.0.0
+   ```
+
+2. 在GitHub上创建Release：
+   - 进入仓库页面，点击"Releases" → "Create a new release"
+   - 选择刚才创建的标签 (v1.0.0)
+   - 填写发布标题和说明
+   - 点击"Publish release"
+
+3. 自动构建：
+   - GitHub Actions会自动构建Windows、macOS和Linux版本
+   - 构建完成后会自动上传到Release页面
+   - 整个过程大约需要10-15分钟
+
+#### 构建产物
+每次发布会自动生成以下文件：
+- `PicSpider-Windows.zip` - Windows可执行文件
+- `PicSpider-macOS.zip` - macOS应用程序包
+- `PicSpider-Linux.tar.gz` - Linux可执行文件
+
+#### 本地测试构建
+在提交代码前，可以使用测试脚本验证构建：
+```bash
+python scripts/test-build.py
+```
+
+更多详细信息请查看 [GitHub工作流文档](.github/README.md)。
 
 ## 功能说明
 
