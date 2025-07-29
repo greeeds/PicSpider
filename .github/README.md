@@ -77,6 +77,11 @@ gh release create v1.0.0 \
 - **macOS**: macos-latest (macOS 12)
 - **Linux**: ubuntu-latest (Ubuntu 22.04)
 - **Python版本**: 3.9
+- **GitHub Actions版本**: 使用最新稳定版本
+  - `actions/checkout@v4`
+  - `actions/setup-python@v5`
+  - `actions/cache@v4`
+  - `actions/upload-artifact@v4`
 
 ### 构建步骤
 1. **环境准备**:
@@ -107,6 +112,39 @@ python build.py
 # 或使用测试脚本
 python scripts/test-build.py
 ```
+
+## 辅助脚本
+
+项目提供了几个辅助脚本来简化发布流程：
+
+### 1. 创建Release脚本
+```bash
+python scripts/create-release.py
+```
+功能：
+- 自动检查Git状态
+- 交互式输入版本号和发布说明
+- 创建Git标签并推送
+- 使用GitHub CLI创建Release
+
+### 2. 工作流状态检查脚本
+```bash
+python scripts/check-workflows.py
+```
+功能：
+- 检查工作流文件是否存在
+- 显示最近的工作流运行状态
+- 查看最新Release信息
+- 检查仓库状态
+
+### 3. 构建测试脚本
+```bash
+python scripts/test-build.py
+```
+功能：
+- 本地模拟GitHub Actions构建过程
+- 验证依赖和配置
+- 测试PyInstaller构建
 
 ## 故障排除
 
@@ -175,6 +213,21 @@ strategy:
     echo "执行自定义操作"
     # 你的自定义命令
 ```
+
+## 更新日志
+
+### 2024-07-29 - Actions版本更新
+- ✅ 更新 `actions/upload-artifact` 从 v3 到 v4
+- ✅ 更新 `actions/setup-python` 从 v4 到 v5
+- ✅ 更新 `actions/cache` 从 v3 到 v4
+- ✅ 替换已弃用的 `actions/upload-release-asset@v1` 为 GitHub CLI
+- ✅ 所有Actions现在使用最新稳定版本
+
+### 主要改进
+- **更好的性能**: 新版本Actions提供更快的执行速度
+- **增强的安全性**: 最新版本包含安全修复
+- **更好的兼容性**: 支持最新的GitHub功能
+- **简化的上传**: 使用GitHub CLI替代已弃用的upload-release-asset
 
 ## 版本管理建议
 

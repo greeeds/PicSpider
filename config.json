@@ -1,0 +1,17 @@
+{
+  "photo_dir": "/Users/greed/PyCharm/PicSpider/downloaded",
+  "albums_per_page": 12,
+  "flask_host": "127.0.0.1",
+  "flask_port": 5000,
+  "flask_debug": false,
+  "max_workers": 5,
+  "download_delay": 0.5,
+  "retry_count": 3,
+  "categories": {
+    "https://everia.club/category/gravure/": 287,
+    "https://everia.club/category/japan/": 274,
+    "https://everia.club/category/korea/": 175,
+    "https://everia.club/category/chinese/": 256,
+    "https://everia.club/category/cosplay/": 115
+  }
+}
