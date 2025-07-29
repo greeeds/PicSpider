@@ -103,7 +103,8 @@ def index():
     all_albums_data = []
     if not os.path.isdir(PHOTO_DIR):
         print(f"错误：找不到目录 {PHOTO_DIR}")
-        return f"错误：配置的图片目录不存在: {PHOTO_DIR}", 500
+        os.makedirs(PHOTO_DIR)
+        # return f"错误：配置的图片目录不存在: {PHOTO_DIR}", 500
 
     try:
         all_items = sorted(os.listdir(PHOTO_DIR))
