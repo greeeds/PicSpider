@@ -2,9 +2,9 @@ name: Build Test
 
 on:
   push:
-    branches: [ main, master, gui ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ main, master, gui ]
+    branches: [ main, master ]
 
 jobs:
   test-build:
@@ -59,24 +59,27 @@ jobs:
 
     - name: Test build script (dry run)
       run: |
-        # 创建一个测试版本的build.py，只执行到spec文件创建
+        # Test build script components without full build
         python -c "
         import sys
         sys.path.append('.')
         from build import get_platform_info, create_pyinstaller_spec, clean_build_dirs
-        
+
         print('Testing build script components...')
         platform_name, ext = get_platform_info()
         print(f'Platform: {platform_name}, Extension: {ext}')
-        
+
         print('Cleaning build directories...')
         clean_build_dirs()
-        
+
         print('Creating PyInstaller spec...')
         create_pyinstaller_spec()
-        
+
         print('Build test completed successfully!')
         "
+      env:
+        PYTHONIOENCODING: utf-8
+        PYTHONUTF8: 1
 
     - name: Verify spec file creation
       run: |
@@ -127,6 +130,9 @@ jobs:
         create_pyinstaller_spec()
         print('✅ Spec file created successfully')
         "
+      env:
+        PYTHONIOENCODING: utf-8
+        PYTHONUTF8: 1
 
     - name: Validate Python syntax
       run: |
