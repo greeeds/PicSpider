@@ -143,8 +143,15 @@ python build.py
 项目配置了GitHub Actions工作流，可以自动进行跨平台构建和发布：
 
 #### 工作流说明
-- **Release工作流**: 在创建GitHub Release时自动触发，执行跨平台构建
+- **Release工作流**: 在创建GitHub Release时自动触发，执行跨平台独立构建
 - **构建测试工作流**: 在代码推送和PR时运行，验证构建脚本的正确性
+- **Release汇总工作流**: 构建完成后自动生成状态报告和失败提醒
+
+#### 独立构建特性
+- **容错机制**: 各平台独立构建，单个平台失败不影响其他平台
+- **并行构建**: Windows、macOS、Linux同时构建，提高效率
+- **智能汇总**: 自动检查构建状态并更新Release描述
+- **失败恢复**: 提供脚本一键重新运行失败的构建
 
 #### 创建发布版本
 1. 为你的代码创建标签：
@@ -174,6 +181,12 @@ python build.py
 在提交代码前，可以使用测试脚本验证构建：
 ```bash
 python scripts/test-build.py
+```
+
+#### 构建失败恢复
+如果部分平台构建失败，可以使用恢复脚本：
+```bash
+python scripts/rerun-failed-builds.py
 ```
 
 #### 构建环境

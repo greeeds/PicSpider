@@ -5,28 +5,68 @@ on:
     types: [published]
 
 jobs:
-  build:
-    name: Build on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: windows-latest
-            platform: windows
-            artifact_name: PicSpider-Windows
-            artifact_path: dist/
-            archive_format: zip
-          - os: macos-latest
-            platform: macos
-            artifact_name: PicSpider-macOS
-            artifact_path: dist/
-            archive_format: zip
-          - os: ubuntu-latest
-            platform: linux
-            artifact_name: PicSpider-Linux
-            artifact_path: dist/
-            archive_format: tar.gz
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
 
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.9'
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~\AppData\Local\pip\Cache
+        key: windows-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          windows-pip-
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run build script
+      run: python build.py
+      env:
+        PYTHONIOENCODING: utf-8
+        PYTHONUTF8: 1
+
+    - name: List dist contents (Debug)
+      run: |
+        echo "Contents of dist directory:"
+        dir dist
+      shell: cmd
+
+    - name: Create ZIP archive
+      run: |
+        cd dist
+        7z a -tzip "../PicSpider-Windows.zip" *
+      shell: cmd
+
+    - name: Upload Release Asset
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh release upload ${{ github.event.release.tag_name }} "PicSpider-Windows.zip" --clobber
+      shell: bash
+
+    - name: Upload build artifacts (for debugging)
+      uses: actions/upload-artifact@v4
+      with:
+        name: PicSpider-Windows-debug
+        path: |
+          dist/
+          *.spec
+        retention-days: 7
+
+  build-macos:
+    name: Build macOS
+    runs-on: macos-latest
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -40,12 +80,67 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        key: macos-pip-${{ hashFiles('**/requirements.txt') }}
         restore-keys: |
-          ${{ runner.os }}-pip-
+          macos-pip-
 
-    - name: Install system dependencies (Linux)
-      if: matrix.os == 'ubuntu-latest'
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run build script
+      run: python build.py
+      env:
+        PYTHONIOENCODING: utf-8
+        PYTHONUTF8: 1
+
+    - name: List dist contents (Debug)
+      run: |
+        echo "Contents of dist directory:"
+        ls -la dist/
+
+    - name: Create ZIP archive
+      run: |
+        cd dist
+        zip -r "../PicSpider-macOS.zip" *
+
+    - name: Upload Release Asset
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh release upload ${{ github.event.release.tag_name }} "PicSpider-macOS.zip" --clobber
+
+    - name: Upload build artifacts (for debugging)
+      uses: actions/upload-artifact@v4
+      with:
+        name: PicSpider-macOS-debug
+        path: |
+          dist/
+          *.spec
+        retention-days: 7
+
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.9'
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: linux-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          linux-pip-
+
+    - name: Install system dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y python3-tk
@@ -65,39 +160,22 @@ jobs:
       run: |
         echo "Contents of dist directory:"
         ls -la dist/
-      shell: bash
 
-    - name: Create archive (Windows/macOS - ZIP)
-      if: matrix.archive_format == 'zip'
+    - name: Create TAR.GZ archive
       run: |
         cd dist
-        if [ "${{ matrix.platform }}" = "windows" ]; then
-          7z a -tzip "../${{ matrix.artifact_name }}.zip" *
-        else
-          zip -r "../${{ matrix.artifact_name }}.zip" *
-        fi
-      shell: bash
-
-    - name: Create archive (Linux - TAR.GZ)
-      if: matrix.archive_format == 'tar.gz'
-      run: |
-        cd dist
-        tar -czf "../${{ matrix.artifact_name }}.tar.gz" *
+        tar -czf "../PicSpider-Linux.tar.gz" *
 
     - name: Upload Release Asset
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        if [ "${{ matrix.archive_format }}" = "zip" ]; then
-          gh release upload ${{ github.event.release.tag_name }} "${{ matrix.artifact_name }}.zip" --clobber
-        else
-          gh release upload ${{ github.event.release.tag_name }} "${{ matrix.artifact_name }}.tar.gz" --clobber
-        fi
+        gh release upload ${{ github.event.release.tag_name }} "PicSpider-Linux.tar.gz" --clobber
 
     - name: Upload build artifacts (for debugging)
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.artifact_name }}-debug
+        name: PicSpider-Linux-debug
         path: |
           dist/
           *.spec
