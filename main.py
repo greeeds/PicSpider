@@ -15,7 +15,7 @@ def clean_filename(text):
 def get_target_links(start_url):
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Referer': 'https://everia.club/'
+        'Referer': ''
     }
     
     try:
@@ -199,11 +199,11 @@ if __name__ == '__main__':
     # 使用字典存储每个分类及其对应的最大页数
     categories = {
 
-        'https://everia.club/category/gravure/': 287,
-        'https://everia.club/category/japan/' : 274,
-        'https://everia.club/category/korea/': 175,
-        'https://everia.club/category/chinese/': 256,
-        'https://everia.club/category/cosplay/': 115,
+        '/gravure/': 287,
+        '/japan/' : 274,
+        '/korea/': 175,
+        '/chinese/': 256,
+        '/cosplay/': 115,
     }
     
     for category_url, max_pages in categories.items():
